@@ -1,5 +1,7 @@
 # Conformance and PLAN-09 parity
 
+The [measured PLAN-09 parity report](plan09-parity-report.md) records exact IDs and outcomes from the scanner adapter's live cross-project corpus.
+
 The `tests/cli.rs` corpus invokes the built binary, verifies JSON status and process exit code, and covers clean, blocked, warning, malformed/incomplete and converted PLAN-09 cases. The `src/lib.rs` tests cover Cedar evaluation errors, malformed policies, unknown request fields, digest and count inconsistencies, and disallowed consumer permits. The scanner adapter's tests cover category fallback, no raw-finding leakage, pin mismatch, shadow error visibility and its versioned policy artifact. These tests do not by themselves prove arm64 behavior or a release artifact; the release matrix must run the same corpus natively on both architectures.
 
 | Rule shape / case | Legacy PLAN-09 | Cedar migration |
