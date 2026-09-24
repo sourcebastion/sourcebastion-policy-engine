@@ -18,6 +18,17 @@ The `tests/cli.rs` corpus invokes the built binary, verifies JSON status and pro
 
 The checked-in expected JSON files and process exit codes are compared on both native release architectures; no architecture-specific normalization is permitted.
 
+M043 adds `tests/fixtures/m043-consumer-cases.json`, a shared v2 consumer
+corpus also checked into the platform repository. The CLI and hosted platform
+run the same twelve cases: clean first scan, image-only new finding,
+target-baseline existing finding, disabled-but-visible row, mandatory account
+floor over a disabled project row, allowance boundary and breach, severity
+filter, other-category fallback, incomplete scan, bad digest, and invalid
+first-scan existing count. Both compare status, determining policy IDs, and
+diagnostic codes; the CLI also checks process exit status. This proves the
+engine and hosted consumer agree on the fixture decisions, but does not yet
+prove GitLab or Action delivery semantics or a production release pin.
+
 | Rule shape / case | Legacy PLAN-09 | Cedar migration |
 | --- | --- | --- |
 | Severity-only `max_count` | Exact lowercased severity, triggers when `count > max_count` | `context.severity.<name> > max_count` |

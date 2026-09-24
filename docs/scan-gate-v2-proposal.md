@@ -158,6 +158,7 @@ Provider-side required-check settings remain repository-owner configuration.
    allowing a PR to suppress its own organization-blocking finding.
 3. Decide whether a policy-file edit requires a dedicated policy owner review
    on top of protected-ref activation. A preview must never be authoritative.
-4. Publish consumer conformance fixtures before any Action or platform
-   cutover. Include image-only, clean, new, existing, first-baseline,
-   disabled-but-visible, guardrail, malformed and partial-scan cases.
+4. The shared M043 consumer corpus now covers image-only, clean, new,
+   existing, first-baseline, disabled-but-visible, guardrail, malformed and
+   partial-scan cases. CI consumer wiring and GitLab/Action delivery proof
+   remain required before cutover.
