@@ -1,6 +1,6 @@
 # PLAN-09 parity report — M042 release-candidate proof
 
-Measured with the `v0.1.0-rc1` engine code and the scanner adapter's [`test_cedar_plan09_parity_live.py`](https://github.com/sourcebastion/sourcebastion-scanner/pull/38), using the real release-mode Rust binary. The test converts plain PLAN-09 rule JSON, runs the existing Python `PolicyEngine` on the same post-suppression finding list, evaluates Cedar through the scanner adapter, and compares status, exact fail IDs and warning IDs. All 14 supported cases matched. This is local amd64 proof; native arm64 parity requires its own CI run before closure.
+Measured with the scanner adapter's [`test_cedar_plan09_parity_live.py`](https://github.com/sourcebastion/sourcebastion-scanner/pull/38) and a real release-mode Rust binary. The test converts plain PLAN-09 rule JSON, runs the existing Python `PolicyEngine` on the same post-suppression finding list, evaluates Cedar through the installed scanner wheel, and compares status, exact fail IDs and warning IDs. All 14 supported cases matched on native Linux amd64 and arm64 in the [packaged-adapter CI run](https://github.com/sourcebastion/sourcebastion-scanner/actions/runs/35962538140), pinned to the `v0.1.0-rc3` engine source. The downloaded RC3 amd64 release binary also passed the installed-wheel clean, blocked and warning smoke proof locally.
 
 | Case | Legacy / Cedar status | Determining fail IDs | Warning IDs | Match |
 | --- | --- | --- | --- | --- |
