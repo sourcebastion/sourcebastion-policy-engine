@@ -22,3 +22,7 @@ printf '[{"severity":"critical","category":"secrets","max_count":0,"action":"fai
 ```
 
 The converter reports unsupported rules as a nonzero error and never changes a scanner default. For scanner `shadow` and opt-in `cedar` modes, see the [consumer adapter](https://github.com/sourcebastion/sourcebastion-scanner/issues/37). The CLI's evaluator runs in a constrained worker with a 512 MiB address-space cap, a 3-second CPU cap and a 5-second wall-clock cap; an uncompleted worker becomes a structured `error` result. Embedding callers must supply equivalent resource bounds.
+
+## Compatibility
+
+Version `0.1.0` implements protocol `1`, schema `1` and profile `scan-gate.v1`. Consumers should pin the exact engine binary and verify all three fields plus `engine_version` and the process exit code before accepting a result. An unknown version or profile is unevaluable, not a pass. Future profile changes require a new profile name or schema version; this pre-1.0 release does not promise that unpinned future binaries preserve the same contract. Release-candidate tags remain drafts until artifact review and publication.
