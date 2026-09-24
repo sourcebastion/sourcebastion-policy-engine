@@ -1,0 +1,1 @@
+{"protocol_version":1,"profile":"scan-gate.v1","schema_version":1,"engine_version":"0.1.0","status":"error","determining_policy_ids":[],"warning_policy_ids":[],"diagnostic_codes":["INVALID_POLICY"],"snapshot_digest":"sha256:2343f094a4dd20ac79f82879d5b445845c10b916951e4724012ccc2831be9a11","bundle_digest":"sha256:8fc0fa8256e4c11933120e24fa7adf026af01988c292467f657ef09ba0e2059c"}

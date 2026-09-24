@@ -62,6 +62,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install pinned Rust toolchain
         run: rustup toolchain install 1.98.1 --profile minimal
+      - name: Package committed source before downloading artifacts
+        run: cargo package --locked
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: sourcebastion-policy-*
@@ -69,7 +71,6 @@ jobs:
           merge-multiple: true
       - name: Add source package and notices
         run: |
-          cargo package --locked
           cp target/package/sourcebastion-policy-engine-*.crate dist/
           cp LICENSE NOTICE.md licenses/CEDAR-APACHE-2.0.txt dist/
           cd dist

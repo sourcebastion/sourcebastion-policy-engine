@@ -2,7 +2,7 @@
 
 The [measured PLAN-09 parity report](plan09-parity-report.md) records exact IDs and outcomes from the scanner adapter's live cross-project corpus.
 
-The `tests/cli.rs` corpus invokes the built binary, verifies JSON status and process exit code, and covers clean, blocked, warning, malformed/incomplete and converted PLAN-09 cases. The `src/lib.rs` tests cover Cedar evaluation errors, malformed policies, unknown request fields, digest and count inconsistencies, and disallowed consumer permits. The scanner adapter's tests cover category fallback, no raw-finding leakage, pin mismatch, shadow error visibility and its versioned policy artifact. These tests do not by themselves prove arm64 behavior or a release artifact; the release matrix must run the same corpus natively on both architectures.
+The `tests/cli.rs` corpus invokes the built binary, verifies JSON status and process exit code, and covers clean, blocked, warning, malformed/incomplete and converted PLAN-09 cases. `tests/golden.rs` compares exact output bytes and exit codes against checked-in blocked, warning, malformed, incomplete and conflicting-policy fixtures; the clean fixture is additionally compared in CI. The `src/lib.rs` tests cover Cedar evaluation errors, malformed policies, unknown request fields, digest and count inconsistencies, and disallowed consumer permits. The scanner adapter's tests cover category fallback, no raw-finding leakage, pin mismatch, shadow error visibility and its versioned policy artifact. Native amd64 and arm64 CI must pass these same golden results before cross-architecture parity is claimed.
 
 | Rule shape / case | Legacy PLAN-09 | Cedar migration |
 | --- | --- | --- |
@@ -23,4 +23,4 @@ PLAN-09 evaluates after ignore suppression and before the display severity filte
 
 Shadow comparison is non-enforcing: PLAN-09 controls exit status while Cedar result/error and mismatched IDs are recorded. In explicit Cedar mode, policy failure exits 1 and evaluation/configuration error exits 2. Rollback is `policy_mode: legacy`. The public Action and hosted platform remain on their own gates until separate integrations and acceptance.
 
-Open conformance gaps before closing M042: static golden results for all adversarial cases; native arm64 run and cross-architecture byte comparison; scanner packaged-path proof; reviewer acceptance of the binary/SBOM/license record and rollback demonstration.
+Open conformance gaps before closing M042: scanner packaged-path proof; reviewer acceptance of the binary/SBOM/license record and rollback demonstration. The native arm64 run and exact-byte comparison are tracked by the CI matrix.
