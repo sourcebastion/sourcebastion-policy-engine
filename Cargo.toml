@@ -1,0 +1,28 @@
+[package]
+name = "sourcebastion-policy-engine"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Offline Cedar scan-gate policy engine"
+repository = "https://github.com/sourcebastion/sourcebastion-policy-engine"
+documentation = "https://github.com/sourcebastion/sourcebastion-policy-engine/blob/main/docs/scan-gate-v1.md"
+
+[lib]
+name = "sourcebastion_policy_engine"
+path = "src/lib.rs"
+
+[[bin]]
+name = "sourcebastion-policy"
+path = "src/main.rs"
+
+[dependencies]
+cedar-policy = "=4.13.0"
+hex = "=0.4.3"
+libc = "=0.2.189"
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = "=1.0.149"
+serde_jcs = "=0.2.0"
+sha2 = "=0.10.9"
+
+[dev-dependencies]
+tempfile = "=3.22.0"

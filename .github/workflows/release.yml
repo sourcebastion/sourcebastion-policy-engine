@@ -1,0 +1,103 @@
+name: draft-policy-engine-release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            architecture: amd64
+          - runner: ubuntu-24.04-arm
+            architecture: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.98.1 --profile minimal
+      - name: Build, test and verify golden output
+        run: |
+          crate_version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "sourcebastion-policy-engine") | .version')
+          if test "${GITHUB_REF_TYPE}" = "tag"; then
+            case "${GITHUB_REF_NAME}" in
+              "v${crate_version}"|"v${crate_version}-rc"*) ;;
+              *) exit 1 ;;
+            esac
+          fi
+          cargo test --locked
+          cargo build --release --locked
+          target/release/sourcebastion-policy evaluate < examples/clean.json > result.json
+          cmp examples/clean.expected.json result.json
+      - name: Generate CycloneDX SBOM with pinned tool
+        run: |
+          cargo install cargo-cyclonedx --version 0.5.9 --locked
+          cargo cyclonedx --format json --spec-version 1.5 --override-filename "sourcebastion-policy-sbom-${{ matrix.architecture }}"
+      - name: Package architecture artifacts
+        run: |
+          mkdir -p dist
+          cp target/release/sourcebastion-policy "dist/sourcebastion-policy-linux-${{ matrix.architecture }}"
+          mv "sourcebastion-policy-sbom-${{ matrix.architecture }}.json" dist/
+          cd dist
+          sha256sum "sourcebastion-policy-linux-${{ matrix.architecture }}" "sourcebastion-policy-sbom-${{ matrix.architecture }}.json" > "SHA256SUMS-${{ matrix.architecture }}"
+          sha256sum -c "SHA256SUMS-${{ matrix.architecture }}"
+      - name: Upload architecture artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sourcebastion-policy-${{ matrix.architecture }}
+          path: dist/
+          if-no-files-found: error
+
+  assemble-candidate:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.98.1 --profile minimal
+      - name: Package committed source before downloading artifacts
+        run: cargo package --locked
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: sourcebastion-policy-*
+          path: dist
+          merge-multiple: true
+      - name: Add source package and notices
+        run: |
+          cp target/package/sourcebastion-policy-engine-*.crate dist/
+          cp LICENSE NOTICE.md licenses/CEDAR-APACHE-2.0.txt dist/
+          cd dist
+          sha256sum -c SHA256SUMS-amd64
+          sha256sum -c SHA256SUMS-arm64
+          sha256sum *.crate LICENSE NOTICE.md CEDAR-APACHE-2.0.txt > SHA256SUMS-source
+      - name: Upload reviewable release candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sourcebastion-policy-release-candidate
+          path: dist/
+          if-no-files-found: error
+
+  draft-release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: assemble-candidate
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: sourcebastion-policy-release-candidate
+          path: dist
+      - name: Create draft for reviewer approval
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" dist/* --verify-tag --draft --title "SourceBastion Policy Engine ${GITHUB_REF_NAME}" --notes "Standalone offline Cedar engine. Review checksums, CycloneDX SBOMs, license notices, scanner adapter proof and rollback evidence before publishing. This draft does not cut over the Action or hosted platform."

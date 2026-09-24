@@ -1,0 +1,1 @@
+{"protocol_version":1,"profile":"scan-gate.v1","schema_version":1,"engine_version":"0.1.0","status":"error","determining_policy_ids":[],"warning_policy_ids":[],"diagnostic_codes":["INCOMPLETE_SNAPSHOT"],"snapshot_digest":null,"bundle_digest":null}

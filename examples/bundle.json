@@ -1,0 +1,21 @@
+{
+  "bundles": [
+    {
+      "id": "repository",
+      "policies": [
+        {
+          "id": "block_critical_secret",
+          "source": "forbid(principal == Scanner::\"local\", action == Action::\"passScan\", resource == Scan::\"current\") when { context.by_category.secrets.critical > 0 };"
+        },
+        {
+          "id": "warn_high_sast",
+          "source": "permit(principal == Scanner::\"local\", action == Action::\"warnScan\", resource == Scan::\"current\") when { context.by_category.sast.high > 0 };"
+        },
+        {
+          "id": "block_many_cves",
+          "source": "forbid(principal == Scanner::\"local\", action == Action::\"passScan\", resource == Scan::\"current\") when { context.category.cve > 5 };"
+        }
+      ]
+    }
+  ]
+}

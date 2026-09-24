@@ -1,0 +1,42 @@
+name: policy-engine-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-conformance:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            architecture: amd64
+            machine: x86_64
+          - runner: ubuntu-24.04-arm
+            architecture: arm64
+            machine: aarch64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt
+      - name: Format
+        run: cargo fmt --check
+      - name: Test offline after dependency download
+        run: |
+          cargo fetch --locked
+          cargo test --locked --offline
+      - name: Release-mode build and golden conformance
+        run: |
+          cargo build --release --locked --offline
+          target/release/sourcebastion-policy evaluate < examples/clean.json > result.json
+          cmp examples/clean.expected.json result.json
+      - name: Confirm native architecture
+        run: |
+          test "$(uname -m)" = "${{ matrix.machine }}"
