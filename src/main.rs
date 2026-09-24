@@ -47,6 +47,7 @@ fn main() {
 }
 
 fn supervised_evaluate(input: &[u8]) -> ! {
+    let start = Instant::now();
     let executable = match std::env::current_exe() {
         Ok(executable) => executable,
         Err(_) => emit_and_exit(&ResultRecord::error("INTERNAL_ERROR")),
@@ -61,19 +62,19 @@ fn supervised_evaluate(input: &[u8]) -> ! {
         Ok(child) => child,
         Err(_) => emit_and_exit(&ResultRecord::error("INTERNAL_ERROR")),
     };
-    if child
-        .stdin
-        .take()
-        .is_some_and(|mut stdin| stdin.write_all(input).is_err())
-    {
+    let Some(mut stdin) = child.stdin.take() else {
         let _ = child.kill();
         let _ = child.wait();
         emit_and_exit(&ResultRecord::error("INTERNAL_ERROR"));
-    }
-    let start = Instant::now();
+    };
+    let input_bytes = input.to_vec();
+    let writer = std::thread::spawn(move || stdin.write_all(&input_bytes));
     loop {
         match child.try_wait() {
             Ok(Some(status)) => {
+                if !writer.join().is_ok_and(|write_result| write_result.is_ok()) {
+                    emit_and_exit(&ResultRecord::error("RESOURCE_LIMIT"));
+                }
                 let mut output = Vec::new();
                 let read_result = child.stdout.take().map(|stdout| {
                     stdout

@@ -131,3 +131,14 @@ fn converter_emits_evaluable_bundle() {
         json!(["plan09/plan09_rule_0002"])
     );
 }
+
+#[test]
+fn nearly_full_request_does_not_hang_on_worker_input() {
+    let mut request = request(0, json!([]));
+    request["raw_findings"] = json!("x".repeat(900_000));
+    let output = invoke(&[], &request);
+    assert_eq!(output.status.code(), Some(2));
+    let result: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(result["status"], "error");
+    assert_eq!(result["diagnostic_codes"], json!(["INVALID_REQUEST"]));
+}
