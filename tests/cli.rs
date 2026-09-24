@@ -1,5 +1,7 @@
 use serde_json::{json, Value};
-use sourcebastion_policy_engine::{canonical_snapshot_digest, Snapshot, CATEGORIES, SEVERITIES};
+use sourcebastion_policy_engine::{
+    canonical_snapshot_digest, gate_settings::GateSettings, v2, Snapshot, CATEGORIES, SEVERITIES,
+};
 use std::io::Write;
 use std::process::{Command, Output, Stdio};
 
@@ -140,6 +142,60 @@ fn converter_emits_evaluable_bundle() {
     assert_eq!(
         result["warning_policy_ids"],
         json!(["plan09/plan09_rule_0002"])
+    );
+}
+
+#[test]
+fn compiled_category_gate_blocks_v2_cli_request() {
+    let settings = serde_json::to_value(GateSettings::default_high()).unwrap();
+    let compiled = invoke(&["compile-gate"], &settings);
+    assert_eq!(compiled.status.code(), Some(0));
+    let bundle: Value = serde_json::from_slice(&compiled.stdout).unwrap();
+    assert_eq!(
+        bundle["bundles"][0]["policies"].as_array().unwrap().len(),
+        14
+    );
+
+    let mut by_category = serde_json::Map::new();
+    for category in v2::CATEGORIES {
+        let mut cohorts = serde_json::Map::new();
+        for cohort in v2::COHORTS {
+            let mut levels = serde_json::Map::new();
+            for severity in SEVERITIES {
+                let count =
+                    i64::from(category == "secrets" && cohort == "new" && severity == "high");
+                levels.insert(severity.into(), json!(count));
+            }
+            cohorts.insert(cohort.into(), Value::Object(levels));
+        }
+        by_category.insert(category.into(), Value::Object(cohorts));
+    }
+    let mut snapshot: v2::Snapshot = serde_json::from_value(json!({
+        "kind": "full", "complete": true, "suppression_basis": "post-ignore",
+        "baseline": {"kind": "target_ref", "digest": format!("sha256:{}", "a".repeat(64))},
+        "finding_count": 1, "by_category": by_category, "digest": ""
+    }))
+    .unwrap();
+    snapshot.digest = v2::canonical_snapshot_digest(&snapshot).unwrap();
+    let request = json!({
+        "protocol_version": 1, "schema_version": 2, "profile": "scan-gate.v2",
+        "snapshot": snapshot, "bundles": bundle["bundles"],
+    });
+    let evaluated = invoke(&["evaluate"], &request);
+    assert_eq!(evaluated.status.code(), Some(1));
+    let result: Value = serde_json::from_slice(&evaluated.stdout).unwrap();
+    assert_eq!(result["status"], "failed");
+    assert_eq!(result["profile"], "scan-gate.v2");
+    assert_eq!(
+        result["determining_policy_ids"],
+        json!(["project/secrets_new"])
+    );
+
+    let invalid = invoke(&["compile-gate"], &json!({"version": 1}));
+    assert_eq!(invalid.status.code(), Some(2));
+    assert_eq!(
+        serde_json::from_slice::<Value>(&invalid.stdout).unwrap()["error_code"],
+        "INVALID_GATE_SETTINGS"
     );
 }
 

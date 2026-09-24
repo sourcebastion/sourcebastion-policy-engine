@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "minimum_severity": "high",
+  "categories": {
+    "secrets": {"enabled": true, "max_new": 0, "max_existing": 0},
+    "sast": {"enabled": true, "max_new": 0, "max_existing": 0},
+    "iac": {"enabled": true, "max_new": 0, "max_existing": 0},
+    "cve": {"enabled": true, "max_new": 0, "max_existing": 0},
+    "dependency_scanning": {"enabled": true, "max_new": 0, "max_existing": 0},
+    "container_images": {"enabled": true, "max_new": 0, "max_existing": 0},
+    "other": {"enabled": true, "max_new": 0, "max_existing": 0}
+  }
+}

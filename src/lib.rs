@@ -1,4 +1,4 @@
-//! Offline, scanner-independent `scan-gate.v1` Cedar engine.
+//! Offline, scanner-independent Cedar scan-gate engine.
 //!
 //! Consumers supply a complete normalized summary and every policy bundle they
 //! intend to enforce. A digest identifies bytes, not completeness or provenance.
@@ -14,7 +14,9 @@ use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::str::FromStr;
 
+pub mod gate_settings;
 pub mod migration;
+pub mod v2;
 
 pub const PROTOCOL_VERSION: u32 = 1;
 pub const SCHEMA_VERSION: u32 = 1;
@@ -96,10 +98,14 @@ pub struct ResultRecord {
 
 impl ResultRecord {
     fn new(status: Status) -> Self {
+        Self::new_for(status, PROFILE, SCHEMA_VERSION)
+    }
+
+    pub(crate) fn new_for(status: Status, profile: &'static str, schema_version: u32) -> Self {
         Self {
             protocol_version: PROTOCOL_VERSION,
-            profile: PROFILE,
-            schema_version: SCHEMA_VERSION,
+            profile,
+            schema_version,
             engine_version: env!("CARGO_PKG_VERSION"),
             status,
             determining_policy_ids: Vec::new(),
@@ -112,6 +118,16 @@ impl ResultRecord {
 
     pub fn error(code: &'static str) -> Self {
         let mut record = Self::new(Status::Error);
+        record.diagnostic_codes.push(code);
+        record
+    }
+
+    pub(crate) fn error_for(
+        code: &'static str,
+        profile: &'static str,
+        schema_version: u32,
+    ) -> Self {
+        let mut record = Self::new_for(Status::Error, profile, schema_version);
         record.diagnostic_codes.push(code);
         record
     }
@@ -132,7 +148,7 @@ pub fn canonical_snapshot_digest(snapshot: &Snapshot) -> Option<String> {
     digest_value(&value)
 }
 
-fn digest_value(value: &Value) -> Option<String> {
+pub(crate) fn digest_value(value: &Value) -> Option<String> {
     let bytes = serde_jcs::to_vec(value).ok()?;
     Some(format!("sha256:{}", hex::encode(Sha256::digest(bytes))))
 }
@@ -147,6 +163,9 @@ pub fn evaluate_bytes(input: &[u8]) -> ResultRecord {
         Ok(value) => value,
         Err(_) => return ResultRecord::error("INVALID_REQUEST"),
     };
+    if value.get("profile").and_then(Value::as_str) == Some(v2::PROFILE) {
+        return v2::evaluate_value(value);
+    }
     if value
         .as_object()
         .is_some_and(|object| !object.contains_key("bundles"))
@@ -173,13 +192,32 @@ pub fn evaluate(request: &Request) -> ResultRecord {
         Ok(digest) => digest,
         Err(code) => return ResultRecord::error(code),
     };
+    let schema = match build_schema() {
+        Some(schema) => schema,
+        None => return ResultRecord::error("INTERNAL_ERROR"),
+    };
+    let context = json!({
+        "finding_count": request.snapshot.finding_count,
+        "severity": request.snapshot.severity,
+        "category": request.snapshot.category,
+        "by_category": request.snapshot.by_category,
+    });
     let mut result = ResultRecord::new(Status::Error);
     result.snapshot_digest = Some(calculated_snapshot_digest);
-    if request.bundles.len() > MAX_BUNDLES {
+    evaluate_bundles(&request.bundles, result, schema, context)
+}
+
+pub(crate) fn evaluate_bundles(
+    bundles: &[Bundle],
+    mut result: ResultRecord,
+    schema: Schema,
+    context: Value,
+) -> ResultRecord {
+    if bundles.len() > MAX_BUNDLES {
         result.diagnostic_codes.push("RESOURCE_LIMIT");
         return result;
     }
-    let mut sorted_bundles = request.bundles.clone();
+    let mut sorted_bundles = bundles.to_vec();
     sorted_bundles.sort_by(|a, b| a.id.cmp(&b.id));
     let mut seen_bundles = BTreeSet::new();
     let mut policy_count = 0usize;
@@ -209,13 +247,6 @@ pub fn evaluate(request: &Request) -> ResultRecord {
     }
     result.bundle_digest =
         digest_value(&serde_json::to_value(&sorted_bundles).unwrap_or(Value::Null));
-    let schema = match build_schema() {
-        Some(schema) => schema,
-        None => {
-            result.diagnostic_codes.push("INTERNAL_ERROR");
-            return result;
-        }
-    };
     let principal = match EntityUid::from_str("Scanner::\"local\"") {
         Ok(uid) => uid,
         Err(_) => return internal_error(result),
@@ -277,12 +308,6 @@ pub fn evaluate(request: &Request) -> ResultRecord {
         result.diagnostic_codes.push("INVALID_POLICY");
         return result;
     }
-    let context = json!({
-        "finding_count": request.snapshot.finding_count,
-        "severity": request.snapshot.severity,
-        "category": request.snapshot.category,
-        "by_category": request.snapshot.by_category,
-    });
     let pass_context =
         match Context::from_json_value(context.clone(), Some((&schema, &pass_action))) {
             Ok(context) => context,

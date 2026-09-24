@@ -1,11 +1,11 @@
 [package]
 name = "sourcebastion-policy-engine"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "MIT"
 description = "Offline Cedar scan-gate policy engine"
 repository = "https://github.com/sourcebastion/sourcebastion-policy-engine"
-documentation = "https://github.com/sourcebastion/sourcebastion-policy-engine/blob/main/docs/scan-gate-v1.md"
+documentation = "https://github.com/sourcebastion/sourcebastion-policy-engine/blob/main/docs/scan-gate-v2-proposal.md"
 
 [lib]
 name = "sourcebastion_policy_engine"

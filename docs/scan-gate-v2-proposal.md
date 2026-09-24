@@ -1,7 +1,8 @@
 # Proposed `scan-gate.v2` contract (M043 S01)
 
-Status: design draft. This document is not an implemented profile or a release
-promise. [`scan-gate.v1`](scan-gate-v1.md) remains the current engine contract.
+Status: M043 development contract. The v2 engine profile and settings compiler
+are implemented on the M043 branch, but no v2 release or consumer cutover has
+occurred. [`scan-gate.v1`](scan-gate-v1.md) remains supported.
 
 ## Purpose and boundary
 
@@ -123,6 +124,12 @@ preview-only; the gate uses the protected target-ref policy until the change
 is approved and merged. File parsing rejects duplicates, unknown categories,
 negative/unbounded limits, and unrecognized versions rather than silently
 ignoring them.
+
+The `compile-gate` CLI and library accept the **complete effective settings**
+as JSON, not a partial override file. The consumer parses YAML, merges
+dashboard and approved repository settings, authenticates guardrails, and
+then compiles the effective project bundle. `examples/gate-settings.json`
+shows the full default input.
 
 The table/file settings compile deterministically into Cedar `forbid
 passScan` policies. Each enabled row fails when the sum of counts at or above
