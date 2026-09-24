@@ -46,7 +46,7 @@ fn request(critical_secrets: i64, policies: Value) -> Value {
     }))
     .unwrap();
     snapshot.digest = canonical_snapshot_digest(&snapshot).unwrap();
-    json!({"protocol_version": 1, "profile": "scan-gate.v1", "snapshot": snapshot,
+    json!({"protocol_version": 1, "schema_version": 1, "profile": "scan-gate.v1", "snapshot": snapshot,
         "bundles": [{"id": "repository", "policies": policies}]})
 }
 
@@ -102,6 +102,17 @@ fn supervised_cli_pass_fail_error_and_warning() {
         error_json["diagnostic_codes"],
         json!(["INCOMPLETE_SNAPSHOT"])
     );
+
+    let mut unversioned = request(0, json!([]));
+    unversioned
+        .as_object_mut()
+        .unwrap()
+        .remove("schema_version");
+    let error = invoke(&["evaluate"], &unversioned);
+    assert_eq!(error.status.code(), Some(2));
+    let error_json: Value = serde_json::from_slice(&error.stdout).unwrap();
+    assert_eq!(error_json["status"], "error");
+    assert_eq!(error_json["diagnostic_codes"], json!(["INVALID_REQUEST"]));
 }
 
 #[test]

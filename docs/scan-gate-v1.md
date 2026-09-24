@@ -5,6 +5,7 @@ Protocol version 1 is JSON-in/JSON-out. Unknown fields and missing required fiel
 ```json
 {
   "protocol_version": 1,
+  "schema_version": 1,
   "profile": "scan-gate.v1",
   "snapshot": {
     "kind": "full", "complete": true, "suppression_basis": "post-ignore",
@@ -25,7 +26,7 @@ Protocol version 1 is JSON-in/JSON-out. Unknown fields and missing required fiel
 }
 ```
 
-The shown digest is a placeholder. `snapshot.digest` is SHA-256 of the [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785) canonical UTF-8 serialization of the snapshot excluding `digest`. It identifies this normalized summary, not the raw finding set or its provenance. The engine recalculates it. `bundle_digest` identifies an ordered canonical representation of bundle/policy IDs and exact policy bytes, not authenticated origin. A missing `bundles` field is an error; an explicit empty policy list is valid.
+The top-level `schema_version` identifies the `scan-gate.v1` snapshot shape and is required alongside the wire `protocol_version` and versioned `profile`; unknown or missing versions are errors. The shown digest is a placeholder. `snapshot.digest` is SHA-256 of the [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785) canonical UTF-8 serialization of the snapshot excluding `digest`. It identifies this normalized summary, not the raw finding set or its provenance. The engine recalculates it. `bundle_digest` identifies an ordered canonical representation of bundle/policy IDs and exact policy bytes, not authenticated origin. A missing `bundles` field is an error; an explicit empty policy list is valid.
 
 Accepted severity keys are `critical`, `high`, `medium`, `low`, `info`, `unknown`; category keys are `secrets`, `sast`, `iac`, `cve`, `dependency_scanning`, `other`. Missing/unrecognized values in consumer findings normalize to `unknown`/`other`. Every count is an integer from 0 through 9,007,199,254,740,991 (the JSON interoperable integer ceiling). Category rows sum to category totals; severity columns sum to severity totals; both sets sum to `finding_count`. Reject missing/extra cells, overflow, contradictory counts, `complete: false`, and a kind other than `full`. Bundle and policy IDs are unique ASCII `[a-z][a-z0-9_-]{0,63}`; duplicate legacy rules receive separate IDs.
 

@@ -39,6 +39,7 @@ pub const CATEGORIES: [&str; 6] = [
 #[serde(deny_unknown_fields)]
 pub struct Request {
     pub protocol_version: u32,
+    pub schema_version: u32,
     pub profile: String,
     pub snapshot: Snapshot,
     pub bundles: Vec<Bundle>,
@@ -162,7 +163,10 @@ pub fn evaluate_bytes(input: &[u8]) -> ResultRecord {
 /// Evaluate an already decoded request. Callers must still treat both `Failed`
 /// and `Error` as non-green and verify the reported digest provenance themselves.
 pub fn evaluate(request: &Request) -> ResultRecord {
-    if request.protocol_version != PROTOCOL_VERSION || request.profile != PROFILE {
+    if request.protocol_version != PROTOCOL_VERSION
+        || request.schema_version != SCHEMA_VERSION
+        || request.profile != PROFILE
+    {
         return ResultRecord::error("INVALID_REQUEST");
     }
     let calculated_snapshot_digest = match validate_snapshot(&request.snapshot) {
@@ -498,6 +502,7 @@ mod tests {
         snapshot.digest = canonical_snapshot_digest(&snapshot).unwrap();
         Request {
             protocol_version: 1,
+            schema_version: 1,
             profile: PROFILE.into(),
             snapshot,
             bundles: vec![Bundle {
@@ -621,6 +626,41 @@ mod tests {
         let result = evaluate_bytes(&serde_json::to_vec(&value).unwrap());
         assert_eq!(result.status, Status::Error);
         assert_eq!(result.diagnostic_codes, ["INVALID_REQUEST"]);
+    }
+
+    #[test]
+    fn missing_or_unknown_schema_version_cannot_pass() {
+        let mut value = serde_json::to_value(request_with(vec![])).unwrap();
+        value.as_object_mut().unwrap().remove("schema_version");
+        let missing = evaluate_bytes(&serde_json::to_vec(&value).unwrap());
+        assert_eq!(missing.status, Status::Error);
+        assert_eq!(missing.diagnostic_codes, ["INVALID_REQUEST"]);
+
+        let mut request = request_with(vec![]);
+        request.schema_version = 2;
+        let unknown = evaluate(&request);
+        assert_eq!(unknown.status, Status::Error);
+        assert_eq!(unknown.diagnostic_codes, ["INVALID_REQUEST"]);
+    }
+
+    #[test]
+    fn versioned_clean_example_passes() {
+        let request: Request = serde_json::from_slice(include_bytes!("../examples/clean.json"))
+            .expect("versioned example parses");
+        let result = evaluate(&request);
+        assert_eq!(
+            result.status,
+            Status::Passed,
+            "{:?}",
+            result.diagnostic_codes
+        );
+        let bytes_result = evaluate_bytes(include_bytes!("../examples/clean.json"));
+        assert_eq!(
+            bytes_result.status,
+            Status::Passed,
+            "{:?}",
+            bytes_result.diagnostic_codes
+        );
     }
 
     #[test]
