@@ -3,6 +3,7 @@ name: draft-policy-engine-release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -25,7 +26,9 @@ jobs:
       - name: Build, test and verify golden output
         run: |
           crate_version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "sourcebastion-policy-engine") | .version')
-          test "${GITHUB_REF_NAME}" = "v${crate_version}"
+          if test "${GITHUB_REF_TYPE}" = "tag"; then
+            test "${GITHUB_REF_NAME}" = "v${crate_version}"
+          fi
           cargo test --locked
           cargo build --release --locked
           target/release/sourcebastion-policy evaluate < examples/clean.json > result.json
@@ -39,8 +42,9 @@ jobs:
           mkdir -p dist
           cp target/release/sourcebastion-policy "dist/sourcebastion-policy-linux-${{ matrix.architecture }}"
           mv "sourcebastion-policy-sbom-${{ matrix.architecture }}.json" dist/
-          sha256sum "dist/sourcebastion-policy-linux-${{ matrix.architecture }}" "dist/sourcebastion-policy-sbom-${{ matrix.architecture }}.json" > "dist/SHA256SUMS-${{ matrix.architecture }}"
-          sha256sum -c "dist/SHA256SUMS-${{ matrix.architecture }}"
+          cd dist
+          sha256sum "sourcebastion-policy-linux-${{ matrix.architecture }}" "sourcebastion-policy-sbom-${{ matrix.architecture }}.json" > "SHA256SUMS-${{ matrix.architecture }}"
+          sha256sum -c "SHA256SUMS-${{ matrix.architecture }}"
       - name: Upload architecture artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -48,11 +52,9 @@ jobs:
           path: dist/
           if-no-files-found: error
 
-  draft-release:
+  assemble-candidate:
     needs: build
     runs-on: ubuntu-24.04
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install pinned Rust toolchain
@@ -67,9 +69,28 @@ jobs:
           cargo package --locked
           cp target/package/sourcebastion-policy-engine-*.crate dist/
           cp LICENSE NOTICE.md licenses/CEDAR-APACHE-2.0.txt dist/
-          sha256sum -c dist/SHA256SUMS-amd64
-          sha256sum -c dist/SHA256SUMS-arm64
-          sha256sum dist/*.crate dist/LICENSE dist/NOTICE.md dist/CEDAR-APACHE-2.0.txt > dist/SHA256SUMS-source
+          cd dist
+          sha256sum -c SHA256SUMS-amd64
+          sha256sum -c SHA256SUMS-arm64
+          sha256sum *.crate LICENSE NOTICE.md CEDAR-APACHE-2.0.txt > SHA256SUMS-source
+      - name: Upload reviewable release candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sourcebastion-policy-release-candidate
+          path: dist/
+          if-no-files-found: error
+
+  draft-release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: assemble-candidate
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: sourcebastion-policy-release-candidate
+          path: dist
       - name: Create draft for reviewer approval
         env:
           GH_TOKEN: ${{ github.token }}
