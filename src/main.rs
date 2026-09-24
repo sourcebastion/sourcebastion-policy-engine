@@ -67,23 +67,32 @@ fn supervised_evaluate(input: &[u8]) -> ! {
         let _ = child.wait();
         emit_and_exit(&ResultRecord::error("INTERNAL_ERROR"));
     };
+    let Some(stdout) = child.stdout.take() else {
+        let _ = child.kill();
+        let _ = child.wait();
+        emit_and_exit(&ResultRecord::error("INTERNAL_ERROR"));
+    };
     let input_bytes = input.to_vec();
     let writer = std::thread::spawn(move || stdin.write_all(&input_bytes));
+    // Drain output while the worker runs; a full pipe would otherwise prevent
+    // the worker from exiting, even for a valid bounded result.
+    let reader = std::thread::spawn(move || {
+        let mut output = Vec::new();
+        let read_result = stdout
+            .take((MAX_OUTPUT_BYTES + 1) as u64)
+            .read_to_end(&mut output);
+        read_result.map(|_| output)
+    });
     loop {
         match child.try_wait() {
             Ok(Some(status)) => {
                 if !writer.join().is_ok_and(|write_result| write_result.is_ok()) {
                     emit_and_exit(&ResultRecord::error("RESOURCE_LIMIT"));
                 }
-                let mut output = Vec::new();
-                let read_result = child.stdout.take().map(|stdout| {
-                    stdout
-                        .take((MAX_OUTPUT_BYTES + 1) as u64)
-                        .read_to_end(&mut output)
-                });
-                if !matches!(read_result, Some(Ok(_))) || output.len() > MAX_OUTPUT_BYTES {
-                    emit_and_exit(&ResultRecord::error("RESOURCE_LIMIT"));
-                }
+                let output = match reader.join() {
+                    Ok(Ok(output)) if output.len() <= MAX_OUTPUT_BYTES => output,
+                    _ => emit_and_exit(&ResultRecord::error("RESOURCE_LIMIT")),
+                };
                 let parsed: serde_json::Value = match serde_json::from_slice(&output) {
                     Ok(value) => value,
                     Err(_) => emit_and_exit(&ResultRecord::error("RESOURCE_LIMIT")),

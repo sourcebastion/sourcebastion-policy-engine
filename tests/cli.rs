@@ -142,3 +142,24 @@ fn nearly_full_request_does_not_hang_on_worker_input() {
     assert_eq!(result["status"], "error");
     assert_eq!(result["diagnostic_codes"], json!(["INVALID_REQUEST"]));
 }
+
+#[test]
+fn maximum_matching_policies_do_not_hang_on_worker_output() {
+    let source = "forbid(principal == Scanner::\"local\", action == Action::\"passScan\", resource == Scan::\"current\");";
+    let policies: Vec<Value> = (0..256)
+        .map(|index| {
+            json!({
+                "id": format!("rule_{index:04}_{}", "x".repeat(54)),
+                "source": source,
+            })
+        })
+        .collect();
+    let output = invoke(&["evaluate"], &request(0, json!(policies)));
+    assert_eq!(output.status.code(), Some(1), "{:?}", output);
+    let result: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(result["status"], "failed");
+    assert_eq!(
+        result["determining_policy_ids"].as_array().unwrap().len(),
+        256
+    );
+}
