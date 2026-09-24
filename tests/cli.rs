@@ -245,7 +245,11 @@ fn m043_consumer_corpus_matches_v2_cli() {
                 row.max_existing = limits["max_existing"].as_i64().unwrap();
             }
             let compiled_floor = invoke(&["compile-gate"], &serde_json::to_value(floor).unwrap());
-            assert_eq!(compiled_floor.status.code(), Some(0), "{id}: floor compile failed");
+            assert_eq!(
+                compiled_floor.status.code(),
+                Some(0),
+                "{id}: floor compile failed"
+            );
             let compiled_floor: Value = serde_json::from_slice(&compiled_floor.stdout).unwrap();
             let mut organization = compiled_floor["bundles"][0].clone();
             organization["id"] = json!("organization");
@@ -275,7 +279,10 @@ fn m043_consumer_corpus_matches_v2_cli() {
             total += count;
         }
         let baseline_kind = case["baseline"].as_str().unwrap();
-        let complete = case.get("complete").and_then(Value::as_bool).unwrap_or(true);
+        let complete = case
+            .get("complete")
+            .and_then(Value::as_bool)
+            .unwrap_or(true);
         let mut snapshot: v2::Snapshot = serde_json::from_value(json!({
             "kind": "full", "complete": complete,
             "suppression_basis": "post-ignore",
