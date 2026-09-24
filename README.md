@@ -4,6 +4,10 @@ Independent, offline Cedar policy engine for application-security scan gates. Th
 
 [M042 milestone](https://github.com/sourcebastion/sourcebastion-policy-engine/milestone/1) · [Contract](docs/scan-gate-v1.md) · [Consumer boundaries](docs/consumers.md) · [Conformance](docs/conformance.md)
 
+The proposed [M043 `scan-gate.v2` contract](docs/scan-gate-v2-proposal.md)
+adds category-level new/existing limits for the dashboard and CI consumers;
+it is a design draft, not an implemented engine profile.
+
 The legacy scanner PLAN-09 gate remains the default. The public Action and hosted platform are separate consumers and are not switched by this project.
 
 Build and evaluate the checked-in clean example:
