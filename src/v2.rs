@@ -80,6 +80,9 @@ pub fn evaluate(request: &Request) -> ResultRecord {
     {
         return error("INVALID_REQUEST");
     }
+    if request.bundles.is_empty() {
+        return error("MISSING_BUNDLE");
+    }
     let digest = match validate_snapshot(&request.snapshot) {
         Ok(digest) => digest,
         Err(code) => return error(code),
@@ -358,5 +361,16 @@ mod tests {
         request.bundles[0].policies.clear();
         request.snapshot.complete = false;
         assert_eq!(evaluate(&request).diagnostic_codes, ["INCOMPLETE_SNAPSHOT"]);
+    }
+
+    #[test]
+    fn v2_missing_bundle_is_not_a_passing_policy() {
+        let mut request = request_with(vec![]);
+        assert_eq!(evaluate(&request).status, Status::Passed);
+        request.bundles.clear();
+        let result = evaluate_bytes(&serde_json::to_vec(&request).unwrap());
+        assert_eq!(result.status, Status::Error);
+        assert_eq!(result.diagnostic_codes, ["MISSING_BUNDLE"]);
+        assert_eq!(result.exit_code(), 2);
     }
 }

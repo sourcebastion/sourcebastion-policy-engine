@@ -92,7 +92,10 @@ digest is RFC 8785 canonical SHA-256 over the snapshot without `digest`.
 The engine validates exact category/cohort/severity keys, non-negative safe
 integers, the sum of all cells equals `finding_count`, resource bounds,
 declared completeness, suppression basis, baseline shape, versions, and
-digest. Unknown or missing fields are errors. Equal v2 request, policy and
+digest. At least one bundle must be present; `bundles: []` is an error, while
+a compiled project bundle with no policies is valid when every project row is
+disabled and no organization floor applies. Unknown or missing fields are
+errors. Equal v2 request, policy and
 engine release must produce byte-identical results on Linux amd64/arm64.
 
 ## Policy tab and repository file
