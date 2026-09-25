@@ -83,6 +83,9 @@ pub fn evaluate(request: &Request) -> ResultRecord {
     if request.bundles.is_empty() {
         return error("MISSING_BUNDLE");
     }
+    if !request.bundles.iter().any(|bundle| bundle.id == "project") {
+        return error("MISSING_PROJECT_BUNDLE");
+    }
     let digest = match validate_snapshot(&request.snapshot) {
         Ok(digest) => digest,
         Err(code) => return error(code),
@@ -367,6 +370,10 @@ mod tests {
     fn v2_missing_bundle_is_not_a_passing_policy() {
         let mut request = request_with(vec![]);
         assert_eq!(evaluate(&request).status, Status::Passed);
+        request.bundles[0].id = "organization".into();
+        let missing_project = evaluate(&request);
+        assert_eq!(missing_project.status, Status::Error);
+        assert_eq!(missing_project.diagnostic_codes, ["MISSING_PROJECT_BUNDLE"]);
         request.bundles.clear();
         let result = evaluate_bytes(&serde_json::to_vec(&request).unwrap());
         assert_eq!(result.status, Status::Error);
