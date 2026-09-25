@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "profile": "scan-gate.v2",
+  "cases": [
+    {
+      "id": "clean_first_scan",
+      "baseline": "none",
+      "counts": [],
+      "expected_status": "passed",
+      "expected_policy_ids": [],
+      "expected_diagnostic_codes": []
+    },
+    {
+      "id": "image_only_new",
+      "baseline": "none",
+      "counts": [{"category": "container_images", "cohort": "new", "severity": "high", "count": 1}],
+      "expected_status": "failed",
+      "expected_policy_ids": ["project/container_images_new"],
+      "expected_diagnostic_codes": []
+    },
+    {
+      "id": "existing_secret",
+      "baseline": "target_ref",
+      "counts": [{"category": "secrets", "cohort": "existing", "severity": "high", "count": 1}],
+      "expected_status": "failed",
+      "expected_policy_ids": ["project/secrets_existing"],
+      "expected_diagnostic_codes": []
+    },
+    {
+      "id": "disabled_image_stays_visible",
+      "baseline": "target_ref",
+      "disabled_categories": ["container_images"],
+      "counts": [{"category": "container_images", "cohort": "new", "severity": "critical", "count": 1}],
+      "expected_status": "passed",
+      "expected_policy_ids": [],
+      "expected_diagnostic_codes": []
+    },
+    {
+      "id": "mandatory_floor_over_disabled_project",
+      "baseline": "target_ref",
+      "disabled_categories": ["secrets"],
+      "guardrails": {
+        "version": 1,
+        "minimum_severity": "high",
+        "categories": {"secrets": {"max_new": 0, "max_existing": 0}}
+      },
+      "counts": [{"category": "secrets", "cohort": "new", "severity": "high", "count": 1}],
+      "expected_status": "failed",
+      "expected_policy_ids": ["organization/secrets_new"],
+      "expected_diagnostic_codes": []
+    },
+    {
+      "id": "new_allowance_boundary",
+      "baseline": "target_ref",
+      "limits": {"secrets": {"max_new": 1}},
+      "counts": [{"category": "secrets", "cohort": "new", "severity": "high", "count": 1}],
+      "expected_status": "passed",
+      "expected_policy_ids": [],
+      "expected_diagnostic_codes": []
+    },
+    {
+      "id": "new_allowance_exceeded",
+      "baseline": "target_ref",
+      "limits": {"secrets": {"max_new": 1}},
+      "counts": [{"category": "secrets", "cohort": "new", "severity": "high", "count": 2}],
+      "expected_status": "failed",
+      "expected_policy_ids": ["project/secrets_new"],
+      "expected_diagnostic_codes": []
+    },
+    {
+      "id": "below_minimum_severity",
+      "baseline": "none",
+      "counts": [{"category": "secrets", "cohort": "new", "severity": "medium", "count": 1}],
+      "expected_status": "passed",
+      "expected_policy_ids": [],
+      "expected_diagnostic_codes": []
+    },
+    {
+      "id": "unknown_maps_to_other",
+      "baseline": "none",
+      "counts": [{"category": "other", "cohort": "new", "severity": "high", "count": 1}],
+      "expected_status": "failed",
+      "expected_policy_ids": ["project/other_new"],
+      "expected_diagnostic_codes": []
+    },
+    {
+      "id": "partial_scan_is_error",
+      "baseline": "target_ref",
+      "complete": false,
+      "counts": [{"category": "secrets", "cohort": "new", "severity": "high", "count": 1}],
+      "expected_status": "error",
+      "expected_policy_ids": [],
+      "expected_diagnostic_codes": ["INCOMPLETE_SNAPSHOT"]
+    },
+    {
+      "id": "malformed_snapshot_digest",
+      "baseline": "target_ref",
+      "corrupt_digest": true,
+      "counts": [],
+      "expected_status": "error",
+      "expected_policy_ids": [],
+      "expected_diagnostic_codes": ["DIGEST_MISMATCH"]
+    },
+    {
+      "id": "first_scan_cannot_claim_existing",
+      "baseline": "none",
+      "counts": [{"category": "secrets", "cohort": "existing", "severity": "high", "count": 1}],
+      "expected_status": "error",
+      "expected_policy_ids": [],
+      "expected_diagnostic_codes": ["INVALID_REQUEST"]
+    }
+  ]
+}

@@ -42,6 +42,14 @@ fn main() {
                 }
             }
         }
+        [command] if command == "compile-gate" => {
+            match sourcebastion_policy_engine::gate_settings::compile_bytes(&input) {
+                Ok(bundle) => emit_json_and_exit(&serde_json::json!({"bundles": [bundle]}), 0),
+                Err(error) => {
+                    emit_json_and_exit(&serde_json::json!({"error_code": error.code()}), 2)
+                }
+            }
+        }
         _ => emit_json_and_exit(&serde_json::json!({"error_code": "INVALID_COMMAND"}), 2),
     }
 }
