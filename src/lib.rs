@@ -16,6 +16,8 @@ use std::str::FromStr;
 
 pub mod gate_settings;
 pub mod migration;
+pub mod rule_set_evaluation;
+pub mod rule_sets;
 pub mod v2;
 
 pub const PROTOCOL_VERSION: u32 = 1;
@@ -209,9 +211,19 @@ pub fn evaluate(request: &Request) -> ResultRecord {
 
 pub(crate) fn evaluate_bundles(
     bundles: &[Bundle],
+    result: ResultRecord,
+    schema: Schema,
+    context: Value,
+) -> ResultRecord {
+    evaluate_bundles_with_limit(bundles, result, schema, context, MAX_POLICIES)
+}
+
+pub(crate) fn evaluate_bundles_with_limit(
+    bundles: &[Bundle],
     mut result: ResultRecord,
     schema: Schema,
     context: Value,
+    max_policies: usize,
 ) -> ResultRecord {
     if bundles.len() > MAX_BUNDLES {
         result.diagnostic_codes.push("RESOURCE_LIMIT");
@@ -236,7 +248,7 @@ pub(crate) fn evaluate_bundles(
             }
             policy_count += 1;
             policy_bytes = policy_bytes.saturating_add(policy.source.len());
-            if policy_count > MAX_POLICIES
+            if policy_count > max_policies
                 || policy.source.len() > MAX_POLICY_BYTES
                 || policy_bytes > MAX_POLICY_TOTAL_BYTES
             {
