@@ -116,7 +116,7 @@ fn valid_digest(digest: &str) -> bool {
     })
 }
 
-fn validate_snapshot(snapshot: &Snapshot) -> Result<String, &'static str> {
+pub(crate) fn validate_snapshot(snapshot: &Snapshot) -> Result<String, &'static str> {
     if snapshot.kind != "full" || !snapshot.complete || snapshot.suppression_basis != "post-ignore"
     {
         return Err("INCOMPLETE_SNAPSHOT");
@@ -171,7 +171,7 @@ fn validate_snapshot(snapshot: &Snapshot) -> Result<String, &'static str> {
     Ok(digest)
 }
 
-fn build_schema() -> Option<Schema> {
+pub(crate) fn build_schema() -> Option<Schema> {
     let severity_attrs: serde_json::Map<String, Value> = SEVERITIES
         .iter()
         .map(|severity| (severity.to_string(), json!({"type": "Long"})))

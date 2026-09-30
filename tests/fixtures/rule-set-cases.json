@@ -1,0 +1,275 @@
+{
+  "fixture_version": 1,
+  "description": "Compiler/Cedar conformance slice; explicit-disable case only, no absent-configuration default.",
+  "cases": [
+    {
+      "id": "all_blocking_rules_retained",
+      "rules": [
+        {"set_id":"lenient","rule_id":"limit","effect":"block","max_new":5},
+        {"set_id":"strict","rule_id":"limit","effect":"block","max_new":2}
+      ],
+      "new_high": 6,
+      "expected": "blocked",
+      "blocked": ["lenient/limit","strict/limit"],
+      "warnings": []
+    },
+    {
+      "id": "all_warning_rules_retained",
+      "rules": [
+        {"set_id":"notice","rule_id":"limit","effect":"warn","max_new":5},
+        {"set_id":"strict","rule_id":"limit","effect":"warn","max_new":2}
+      ],
+      "new_high": 6,
+      "expected": "passed_with_warnings",
+      "blocked": [],
+      "warnings": ["notice/limit","strict/limit"]
+    },
+    {
+      "id": "disabled_set_does_not_disable_other_block",
+      "rules": [
+        {"set_id":"disabled","rule_id":"limit","effect":"block","max_new":0,"set_enabled":false},
+        {"set_id":"remaining","rule_id":"limit","effect":"block","max_new":2}
+      ],
+      "new_high": 3,
+      "expected": "blocked",
+      "blocked": ["remaining/limit"],
+      "warnings": []
+    },
+    {
+      "id": "unknown_explicitly_selected",
+      "rules": [{"set_id":"classification","rule_id":"limit","effect":"block","max_new":0,"severities":["unknown"]}],
+      "new_high": 0,
+      "new_unknown": 1,
+      "expected": "blocked",
+      "blocked": ["classification/limit"],
+      "warnings": []
+    },
+    {
+      "id": "unknown_not_silently_added",
+      "rules": [{"set_id":"legacy","rule_id":"limit","effect":"block","max_new":0,"severities":["critical","high"]}],
+      "new_high": 0,
+      "new_unknown": 1,
+      "expected": "passed",
+      "blocked": [],
+      "warnings": []
+    },
+    {
+      "id": "strictest_block",
+      "rules": [
+        {
+          "set_id": "lenient",
+          "rule_id": "limit",
+          "effect": "block",
+          "max_new": 5
+        },
+        {
+          "set_id": "strict",
+          "rule_id": "limit",
+          "effect": "block",
+          "max_new": 2
+        }
+      ],
+      "new_high": 3,
+      "expected": "blocked",
+      "blocked": [
+        "strict/limit"
+      ],
+      "warnings": []
+    },
+    {
+      "id": "warn_does_not_tighten_block",
+      "rules": [
+        {
+          "set_id": "release",
+          "rule_id": "limit",
+          "effect": "block",
+          "max_new": 5
+        },
+        {
+          "set_id": "notice",
+          "rule_id": "limit",
+          "effect": "warn",
+          "max_new": 0
+        }
+      ],
+      "new_high": 3,
+      "expected": "passed_with_warnings",
+      "blocked": [],
+      "warnings": [
+        "notice/limit"
+      ]
+    },
+    {
+      "id": "block_retains_warning",
+      "rules": [
+        {
+          "set_id": "release",
+          "rule_id": "limit",
+          "effect": "block",
+          "max_new": 5
+        },
+        {
+          "set_id": "notice",
+          "rule_id": "limit",
+          "effect": "warn",
+          "max_new": 0
+        }
+      ],
+      "new_high": 6,
+      "expected": "blocked",
+      "blocked": [
+        "release/limit"
+      ],
+      "warnings": [
+        "notice/limit"
+      ]
+    },
+    {
+      "id": "inclusive_limit",
+      "rules": [
+        {
+          "set_id": "release",
+          "rule_id": "limit",
+          "effect": "block",
+          "max_new": 2
+        }
+      ],
+      "new_high": 2,
+      "expected": "passed",
+      "blocked": [],
+      "warnings": []
+    },
+    {
+      "id": "disabled_set",
+      "rules": [
+        {
+          "set_id": "strict",
+          "rule_id": "limit",
+          "effect": "block",
+          "max_new": 0,
+          "set_enabled": false
+        },
+        {
+          "set_id": "lenient",
+          "rule_id": "limit",
+          "effect": "block",
+          "max_new": 5
+        }
+      ],
+      "new_high": 3,
+      "expected": "passed",
+      "blocked": [],
+      "warnings": []
+    },
+    {
+      "id": "disabled_rule",
+      "rules": [
+        {
+          "set_id": "strict",
+          "rule_id": "limit",
+          "effect": "block",
+          "max_new": 0,
+          "rule_enabled": false
+        },
+        {
+          "set_id": "lenient",
+          "rule_id": "limit",
+          "effect": "block",
+          "max_new": 5
+        }
+      ],
+      "new_high": 3,
+      "expected": "passed",
+      "blocked": [],
+      "warnings": []
+    },
+    {
+      "id": "all_disabled",
+      "rules": [
+        {
+          "set_id": "strict",
+          "rule_id": "limit",
+          "effect": "block",
+          "max_new": 0,
+          "set_enabled": false
+        }
+      ],
+      "new_high": 3,
+      "expected": "gating_disabled",
+      "blocked": [],
+      "warnings": []
+    },
+    {
+      "id": "grouped_severities",
+      "rules": [
+        {
+          "set_id": "combined",
+          "rule_id": "limit",
+          "effect": "block",
+          "max_new": 2,
+          "severities": [
+            "high",
+            "critical"
+          ]
+        }
+      ],
+      "new_high": 2,
+      "new_critical": 2,
+      "expected": "blocked",
+      "blocked": [
+        "combined/limit"
+      ],
+      "warnings": []
+    },
+    {
+      "id": "omitted_existing_unconstrained",
+      "rules": [
+        {
+          "set_id": "new_only",
+          "rule_id": "limit",
+          "effect": "block",
+          "max_new": 0
+        }
+      ],
+      "new_high": 0,
+      "existing_high": 5,
+      "expected": "passed",
+      "blocked": [],
+      "warnings": []
+    },
+    {
+      "id": "existing_limit_independent",
+      "rules": [
+        {
+          "set_id": "both",
+          "rule_id": "limit",
+          "effect": "block",
+          "max_new": 0,
+          "max_existing": 2
+        }
+      ],
+      "new_high": 0,
+      "existing_high": 3,
+      "expected": "blocked",
+      "blocked": [
+        "both/limit"
+      ],
+      "warnings": []
+    },
+    {
+      "id": "warn_only",
+      "rules": [
+        {
+          "set_id": "notice",
+          "rule_id": "limit",
+          "effect": "warn",
+          "max_new": 0
+        }
+      ],
+      "new_high": 2,
+      "expected": "passed_with_warnings",
+      "blocked": [],
+      "warnings": ["notice/limit"]
+    }
+  ]
+}
